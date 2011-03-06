@@ -1,0 +1,308 @@
+#!/usr/bin/perl
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# Druckt den Text "Kopie" quer über eine Seite
+# dieses Skript wirkt als Filter, z. B.
+#
+# 	$ cat test.ps | ps-stempel | lpr
+#
+# kann aber auch ganz normal mit dem Dateinamen als Parameter
+# aufgerufen werden, z. B.
+#
+# 	$ ps-stempel test.ps > test_kopie.ps
+#
+# Zudem können einige Parameter gesetzt werden, siehe
+# "ps-stempel -h" für eine genauere Beschreibung derselben.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# PostScript-Code siehe c't 7/2002, Seite 214 "PostScript-Dateien stempeln"
+#
+# Lizenz für diesen Code, enthalten in 
+# ftp://ftp.heise.de/pub/ct/listings/0207-212.zip:
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+#              c't - Magazin fuer Computertechnik
+#
+#                Verlag Heinz Heise GmbH & Co KG
+#                      Helstorfer Str. 7
+#                      30625 Hannover
+#
+# Die in diesem Archiv enthaltene Software ist urheberrechtlich geschuetzt.
+# Es handelt sich nicht um Public-Domain-Software. Sie ist nicht fuer den
+# Handel bestimmt. Im allgemeinen ist fuer das Verstaendnis und die
+# Inbetriebnahme der Software der dazu in c't veroeffentlichte Artikel
+# Voraussetzung. Wir koennen keine Hilfestellung geben, wenn der
+# entsprechende Artikel beim Anwender nicht bekannt ist.
+#
+# Sie erhalten die Genehmigung, dieses Archiv in Datennetzen zu kopieren und
+# auch Teile daraus Ihren Usern zum Download anzubieten, sofern Sie folgende
+# Bedingungen einhalten:
+#
+# 1. Den Usern duerfen neben den ueblichen Gebuehren keine zusaetzlichen
+#    Kosten entstehen.
+# 2. Der Anwender muss ueber den Ursprung der Software informiert sein.
+# 
+# !!!        Diese Genehmigung gilt nicht fuer den Bildschirmtext        !!!
+#                  der DBP Telekom oder aehnliche Systeme.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# Der Rest (Code für ISO-Latin1-Encoding) stammt aus dem Perl-Modul 
+# PostScript::Simple, siehe dessen Manpage (man PostScript::Simple, 
+# falls das Modul installiert ist) für Details über das Copyright.
+#
+# Dieser Code steht unter den Kopierbedingungen von Perl, also zum einen
+# der GNU General Public License, zum anderen der Perl Artistic License.
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+#
+# Meinen eigenen Code stelle ich unter die gleiche Lizenz wie Perl.
+#
+# Im Grunde heißt dies alles, dass Sie dieses Skript frei verwenden dürfen,
+# egal ob privat oder kommerziell.
+#
+# (c) 2002, Bernhard Walle <Bernhard.Walle@gmx.de>
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+use Getopt::Std;
+
+getopts('hg:r:t:s:c:p:x:y:');
+
+# legt den Grauwert des Stempels fest
+$grauwert 	= "0.8";
+
+# Schriftgröße für den Text
+$groesse 	= "90";
+
+# Text, der gestempelt werden soll (darf keine Umlaute enthalten)
+$text 		= "Kopie";
+
+# Schriftart für den Text
+$schrift 	= "Helvetica-Bold";
+
+# Position
+$position 	= "center";
+$x 			= 30;
+$y 			= 750;
+
+$farbe = "gray";
+
+$grauwert 	= $opt_r 	if $opt_r;
+$groesse 	= $opt_g 	if $opt_g;
+$text 		= $opt_t 	if $opt_t;
+$schrift 	= $opt_s 	if $opt_s;
+$farbe 		= $opt_c 	if $opt_c;
+$position 	= $opt_p 	if $opt_p;
+$x 			= $opt_x 	if $opt_x;
+$y 			= $opt_y 	if $opt_y;
+
+
+# FARBE
+$farbe =~ s/grey/gray/g;
+
+if (! $opt_c) {
+	$farbe = "$grauwert setgray";
+}
+else {
+	if ($farbe !~ /^#[\dA-Fa-f]{6}$/) {
+		$farbe =~ s/aqua/#00FFFF/i;
+		$farbe =~ s/black/#000000/i;
+		$farbe =~ s/blue/#0000FF/i;
+		$farbe =~ s/fuchsia/#FF00FF/i;
+		$farbe =~ s/gr[ae]y/#808080/i;
+		$farbe =~ s/green/#008000/i;
+		$farbe =~ s/lime/#00FF00/i;
+		$farbe =~ s/maroon/#800000/i;
+		$farbe =~ s/navy/#000080/i;
+		$farbe =~ s/olive/#808000/i;
+		$farbe =~ s/purple/#800080/i;
+		$farbe =~ s/red/#FF0000/i;
+		$farbe =~ s/silver/#C0C0C0/i;
+		$farbe =~ s/teal/#008080/i;
+		$farbe =~ s/yellow/#FFFF00/i;
+		$farbe =~ s/white/#FFFFFF/i;
+	}
+
+	if ($farbe !~ /^#[\dA-Fa-f]{6}$/) {
+		print "Ungültige Farbe angegeben. Standard wird verwendet!";
+		$farbe = "$grauwert setgray";
+	}
+
+	($red, $green, $blue) = $farbe =~ /#([\dA-Fa-f]{2})([\dA-Fa-f]{2})([\dA-Fa-f]{2})$/g;
+
+	# dezimal und in Brüche
+	foreach ($red, $green, $blue) {
+		$_ =  (hex $_) / 255;
+	}
+
+	$farbe = "$red $green $blue setrgbcolor";
+}
+
+
+# Fallunterscheidung fuer 'top' und 'center'
+my $currentscreenLine = ($position eq "center")
+	? "currentscreen exch pop h w atan dup"
+	: "currentscreen exch pop 0 dup";
+
+my $xyLine = ($position eq "center") 
+	? "x y moveto text show"
+	: "$x $y moveto text show";
+	
+
+if ($opt_h) {
+	print <<'EOF';
+
+                  ps-stempel           © 2002-03, Bernhard Walle
+                  ==========
+
+Fügt einen Stempel als Wasserzeichen in eine PostScript-Datei ein.
+
+------------------------------------------------------------------
+Option    Beschreibung                             Voreinstellung
+------------------------------------------------------------------
+-h        Hilfe anzeigen                           -
+-g #      Schriftgröße                             90
+-t $      Text (ISO Latin 1)                       Kopie
+-r #      Grauwert                                 0.8
+-c $      Farbe                                    -
+          Möglich sind die 16 Standard-HTML-
+          Farben und die HTML-Notation #RRGGBB
+-s $      Schriftart                               Helvetica-Bold
+-p $      Position des Textes                      center
+          `top'   : Open links
+          `center': Mitte schräg
+-x #      genaue x-Position bei -p 'top'           30
+-y #      genaue y-Position bei -p 'top'           750
+          (Angabe in 1/72", Ursprung unten links)
+------------------------------------------------------------------
+
+Erklärung: `#' steht für eine Zahl, `$' für eine Zeichenkette
+
+EOF
+	exit(0);
+}
+
+# nur eine Datei darf angegeben werden
+if (@ARGV > 1) {
+	die "Bitte nur ein Argument angeben!";
+}
+
+while (<>) {
+	print;
+	
+	if ($. == 1) {
+		print <<EOF;
+
+% stempel.ps
+
+% Define ISO Latin1 encoding if it doesnt exist
+/ISOLatin1Encoding where {
+%	(ISOLatin1 exists!) =
+	pop
+} {
+	(ISOLatin1 does not exist, creating...) =
+	/ISOLatin1Encoding StandardEncoding STARTDIFFENC
+		144 /dotlessi /grave /acute /circumflex /tilde 
+		/macron /breve /dotaccent /dieresis /.notdef /ring 
+		/cedilla /.notdef /hungarumlaut /ogonek /caron /space 
+		/exclamdown /cent /sterling /currency /yen /brokenbar 
+		/section /dieresis /copyright /ordfeminine 
+		/guillemotleft /logicalnot /hyphen /registered 
+		/macron /degree /plusminus /twosuperior 
+		/threesuperior /acute /mu /paragraph /periodcentered 
+		/cedilla /onesuperior /ordmasculine /guillemotright 
+		/onequarter /onehalf /threequarters /questiondown 
+		/Agrave /Aacute /Acircumflex /Atilde /Adieresis 
+		/Aring /AE /Ccedilla /Egrave /Eacute /Ecircumflex 
+		/Edieresis /Igrave /Iacute /Icircumflex /Idieresis 
+		/Eth /Ntilde /Ograve /Oacute /Ocircumflex /Otilde 
+		/Odieresis /multiply /Oslash /Ugrave /Uacute 
+		/Ucircumflex /Udieresis /Yacute /Thorn /germandbls 
+		/agrave /aacute /acircumflex /atilde /adieresis 
+		/aring /ae /ccedilla /egrave /eacute /ecircumflex 
+		/edieresis /igrave /iacute /icircumflex /idieresis 
+		/eth /ntilde /ograve /oacute /ocircumflex /otilde 
+		/odieresis /divide /oslash /ugrave /uacute 
+		/ucircumflex /udieresis /yacute /thorn /ydieresis
+	ENDDIFFENC
+} ifelse
+
+/REENCODEFONT { % /Newfont NewEncoding /Oldfont
+	findfont dup length 4 add dict
+	begin
+		{ % forall
+			1 index /FID ne 
+			2 index /UniqueID ne and
+			2 index /XUID ne and
+			{ def } { pop pop } ifelse
+		} forall
+		/Encoding exch def
+		% defs for DPS
+		/BitmapWidths false def
+		/ExactSize 0 def
+		/InBetweenSize 0 def
+		/TransformedChar 0 def
+		currentdict
+	end
+	definefont pop
+} bind def
+
+% Reencode the used font
+/$schrift-iso ISOLatin1Encoding /$schrift REENCODEFONT
+/box {
+  newpath 3 copy pop exch 4 copy pop pop
+  8 copy pop pop pop pop exch pop exch
+  3 copy pop pop exch moveto lineto
+  lineto lineto pop pop pop pop closepath
+} bind def
+%\%EndResource
+%\%EndProlog
+
+userdict /BeginPageDict 10 dict put
+BeginPageDict begin
+	/text ($text) def
+
+	/fontname /$schrift-iso def
+	/fontsize $groesse def % Fonthoehe
+
+	% Gesamthoehe der Seite ermitteln
+	clippath pathbbox
+	/ury exch def /urx exch def
+	/lly exch def /llx exch def
+	/h ury lly sub def
+	/w urx llx sub def
+
+	% Diagonale berechnen
+	/len h dup mul w dup mul add sqrt def
+	/x 0 def
+	/y fontsize 0.7 mul -2 div def
+
+	% Diese Prozedur wird am Anfang jeder Seite aufgerufen
+	/PaintProc {
+		pop % page count
+		null begin save
+		$currentscreenLine
+		rotate 45 sub exch setscreen
+		fontname findfont fontsize scalefont
+		setfont
+		$farbe
+		len text stringwidth pop sub 2 div
+		/x exch def
+		$xyLine
+		restore end
+	} dup 1 currentdict put bind def
+end
+
+% Aktivierung
+<< /BeginPage
+userdict /BeginPageDict get /PaintProc get
+>> setpagedevice
+EOF
+	}
+}
+
+# vim: ts=4 sw=4
