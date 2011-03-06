@@ -2,7 +2,7 @@
 #
 # jahreskalender.pl -- gibt einen Jahreskalender in Ã¼blicher Form aus.
 #
-# (c) Bernhard.Walle <Bernhard.Walle@gmx.de>
+# (c) Bernhard.Walle <bernhard@bwalle.de>
 
 # You may use this script under the conditions of the Perl Artistic License.
 #
@@ -291,9 +291,9 @@ sub get_feiertag
 
 	@normal_holidays = (
 		[  1,  1, "Neujahr" ],
-		[  1,  6, "Hl. 3 Könige" ],
+		[  1,  6, "Hl. 3 K\xF6nige" ],
 		[  5,  1, "Tag d. Arbeit"],
-		[  8, 15, "Mariä Himmelfahrt" ],
+		[  8, 15, "Mari\xE4 Himmelfahrt" ],
 		[ 11,  1, "Allerheiligen" ],
 		[ 12, 25, "1. Weihnachtsfeiert." ],
 		[ 12, 26, "2. Weihnachtsfeiert." ],
@@ -430,3 +430,4 @@ sub get_feiertag
 	}
 }
 
+# vim: set sw=4 ts=4 noet:
