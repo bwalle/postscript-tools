@@ -355,6 +355,7 @@ sub get_feiertag
 
 {
 	my @termine;	# statische Variable in C/C++
+	my $termine_read = 0;
 
 	sub parse_termine 
     {
@@ -412,9 +413,10 @@ sub get_feiertag
 			return 0;
 		}
         
-		if (!defined(@termine)) 
+		if (!$termine_read)
         {
 			parse_termine();
+			$termine_read = 1;
 		}
         
 		for ($i = 0; $i < @termine; $i++) 
