@@ -1,4 +1,4 @@
-#!/usr/bin/perl 
+#!/usr/bin/env perl
 #
 # jahreskalender.pl -- gibt einen Jahreskalender in üblicher Form aus.
 #
