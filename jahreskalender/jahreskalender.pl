@@ -20,11 +20,12 @@ use Date::Calc ("Days_in_Month", "Delta_Days", "Easter_Sunday", "Add_Delta_Days"
 use PostScript::Simple;
 use sigtrap qw(die INT QUIT);
 use Getopt::Std;
+use Text::Iconv;
 
 $VERSION = "0.3.2";
 
 # Parameter
-getopts('o:y:t:hvn');
+getopts('o:y:t:hvnT:');
 
 if ($opt_h)
 {
@@ -59,6 +60,8 @@ BEACHTEN!    Sprachumgebung Ihres Betriebssystemes. Dies gilt aber nur für die
              (oder mehreren) Leerzeichen/Tabulatoren mit anschließender Be-
              zeichnung. Kommentare können mit `#' am Zeilenanfang gesetzt 
              werden. Termine in einem anderen Jahr werden einfach ignoriert.
+
+-T Titel     Fügt den entsprechenden Titel hinzu.
 
 -n           Feiertage werden nur fett gedruckt, nicht beschriftet. Diese
              Einstellung ist nützlich für das Erstellen fremdsprachiger
@@ -97,6 +100,9 @@ $HOLIDAYS = $opt_n ? 0 : 1;
 $LANG = defined $ENV{LANG} ? substr($ENV{LANG}, 0, 2) : "de";
 Language(Decode_Language($LANG));
 
+# Titel
+$TITLE = $opt_T || "";
+
 $p = PostScript::Simple->new(landscape => 1,
 							units => 'mm',
 							papersize => 'A4',
@@ -107,6 +113,17 @@ $p = PostScript::Simple->new(landscape => 1,
 						);
 
 $monat = 1;
+
+if ($TITLE)
+{
+	$TOP = 170;
+	$FONTSIZE = 8;
+}
+else
+{
+	$TOP = 190;
+	$FONTSIZE = 9;
+}
 						
 foreach $page (1, 2) 
 {
@@ -118,21 +135,33 @@ foreach $page (1, 2)
 	$p->setcolour("black");
 	$p->setlinewidth(0.7);
 
+	# Großer Titel
+	if ($TITLE)
+	{
+		$converter = Text::Iconv->new("utf-8", "iso8859-1");
+		$title_latin1 = $converter->convert($TITLE);
+
+		$p->box(20, $TOP+20, 277, $TOP);
+		$p->setfont('Times-Bold-iso', 30);
+		$p->text(27, ($TOP+20)-14, $title_latin1);
+
+	}
+
 	# Rahmen und Titel
-	$p->box(20, 20, 277, 190);
+	$p->box(20, 20, 277, $TOP);
 
 	# vertikale Linien
 	for ($i = 1; $i <= 5; $i++) 
     {
-		$p->line((257/6*$i + 20), 20, (257/6*$i + 20), 190);
+		$p->line((257/6*$i + 20), 20, (257/6*$i + 20), $TOP);
 	}
 
-	$p->line(20, 183, 277, 183);
+	$p->line(20, ($TOP-7), 277, ($TOP-7));
 	
 	$p->setfont('Times-Bold-iso', 12);
 	for ($monat = 1+($page-1)*6; $monat <= 6*$page; $monat++) 
     {	
-		$p->text(257/6*($monat-6*($page-1)-1)+23, 185,
+		$p->text(257/6*($monat-6*($page-1)-1)+23, $TOP-5,
 			Month_to_Text($monat));
 	}
 
@@ -140,13 +169,13 @@ foreach $page (1, 2)
 	# vertikale Linien
 	for ($i = 0; $i <= 5; $i++) 
     {
-		$p->line((257/6*$i + 31), 20, (257/6*$i + 31), 183);
+		$p->line((257/6*$i + 31), 20, (257/6*$i + 31), $TOP-7);
 	}
 	
 	# horizontale Linien
 	for ($i = 1; $i < 31; $i ++) 
     {
-		$p->line(20, (183-163/31*$i), 277, (183-163/31*$i));
+		$p->line(20, (($TOP-7)-($TOP-7-20)/31*$i), 277, (($TOP-7)-($TOP-7-20)/31*$i));
 	}
 
 	# Text einfügen
@@ -165,16 +194,16 @@ foreach $page (1, 2)
 
 			if ($tag <= Days_in_Month($YEAR, $monat)) 
             {
-				$p->setfont('Helvetica-iso', 9);
+				$p->setfont('Helvetica-iso', $FONTSIZE);
 
 				
 				# Wochennummer am Monatsanfang
 				if ($tag == 1 and Day_of_Week($YEAR, $monat, $tag) == 1) {
 					$p->setfont('Helvetica-iso', 7);
 					$p->text((257/6*($monat-6*($page-1)-1)+59),
-						(183-163/31*($tag-1)-2.5), 
+						(($TOP-7)-($TOP-7-20)/31*($tag-1)-2.5), 
 						get_week_string($YEAR, $monat, $tag+1));
-					$p->setfont('Helvetica-iso', 9);
+					$p->setfont('Helvetica-iso', $FONTSIZE);
 				}
 					
 				# Tage mit Beschriftung (Sonntag, Termine, Feiertage)
@@ -185,7 +214,7 @@ foreach $page (1, 2)
 					if (get_termin($tag, $monat)) 
                     {
 						$p->text(257/6*($monat-6*($page-1)-1)+32,
-							(183-163/31*$tag+1.5), 
+							(($TOP-7)-($TOP-7-20)/31*$tag+1.5), 
 							get_termin($tag, $monat));
 
 					}
@@ -196,46 +225,46 @@ foreach $page (1, 2)
 						# Abschlusslinie
 						$p->setlinewidth(0.5);
 						$p->line((257/6*($monat-6*($page-1)-1)+20),
-							(183-163/31*$tag),
+							(($TOP-7)-($TOP-7-20)/31*$tag),
 							257/6*($monat-6*($page-1))+20,
-							(183-163/31*$tag),);
+							(($TOP-7)-($TOP-7-20)/31*$tag),);
 
 						# Wochennummer normal
 						if ($tag != Days_in_Month($YEAR, $monat)) 
                         {
 							$p->setfont('Helvetica-iso', 7);
 							$p->text((257/6*($monat-6*($page-1)-1)+59),
-								(183-163/31*$tag-2.5), 
+								(($TOP-7)-($TOP-7-20)/31*$tag-2.5), 
 								get_week_string($YEAR, $monat, $tag+1));
 						}
 							
 						$p->setlinewidth(0.1);
-						$p->setfont('Helvetica-Bold-iso', 9);
+						$p->setfont('Helvetica-Bold-iso', $FONTSIZE);
 					}
 
 					# Feiertag
 					if (get_feiertag($tag, $monat)) 
                     {
-						$p->setfont('Helvetica-iso', 9);
+						$p->setfont('Helvetica-iso', $FONTSIZE);
 						unless (get_termin($tag, $monat)) 
                         {
 							$p->text(257/6*($monat-6*($page-1)-1)+32,
-								(183-163/31*$tag+1.5), 
+								(($TOP-7)-($TOP-7-20)/31*$tag+1.5), 
 								get_feiertag($tag, $monat));
 						}
-						$p->setfont('Helvetica-Bold-iso', 9);
+						$p->setfont('Helvetica-Bold-iso', $FONTSIZE);
 					}
 
 				}
 
 				# Tagzahl
 				$p->text(257/6*($monat-6*($page-1)-1)+21.5+$zusatz, 
-					(183-163/31*$tag+1.5),
+					(($TOP-7)-($TOP-7-20)/31*$tag+1.5),
 					$tag);
 
 				# Wochentag
 				$p->text(257/6*($monat-6*($page-1)-1)+25.5, 
-					(183-163/31*$tag+1.5), substr(Day_of_Week_Abbreviation(
+					(($TOP-7)-($TOP-7-20)/31*$tag+1.5), substr(Day_of_Week_Abbreviation(
 						Day_of_Week($YEAR, $monat, $tag)), 0, 2));
 			}
 		}
