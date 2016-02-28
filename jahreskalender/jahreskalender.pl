@@ -275,7 +275,7 @@ foreach $page (1, 2)
 if ($DATEI eq "") 
 {
     # Drucken
-	if ($^O =~ /Win/i) 
+	if ($^O =~ /^Win/i)
     {
 		print STDERR "Drucken unter Windows wird nicht unterstützt.\n";
 		print STDERR "Erzeugen Sie eine Postscript-Datei und drucken sie mit Ghostscript aus.\n";
