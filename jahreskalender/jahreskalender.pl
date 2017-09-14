@@ -22,7 +22,7 @@ use sigtrap qw(die INT QUIT);
 use Getopt::Std;
 use Text::Iconv;
 
-$VERSION = "0.3.2";
+$VERSION = "0.3.3";
 
 # Parameter
 getopts('o:y:t:hvnT:');
@@ -111,6 +111,8 @@ $p = PostScript::Simple->new(landscape => 1,
 							reencode => 'ISOLatin1Encoding',
 							eps => 0,
 						);
+
+$p->{'pscomments'} =~ s/Portrait/Landscape/g;
 
 $monat = 1;
 
