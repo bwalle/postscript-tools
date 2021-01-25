@@ -20,7 +20,8 @@ use Date::Calc ("Days_in_Month", "Delta_Days", "Easter_Sunday", "Add_Delta_Days"
 use PostScript::Simple;
 use sigtrap qw(die INT QUIT);
 use Getopt::Std;
-use Text::Iconv;
+use Encode qw(from_to);
+
 
 $VERSION = "0.3.3";
 
@@ -140,12 +141,10 @@ foreach $page (1, 2)
     # Großer Titel
     if ($TITLE)
     {
-        $converter = Text::Iconv->new("utf-8", "iso8859-1");
-        $title_latin1 = $converter->convert($TITLE);
-
         $p->box(20, $TOP+20, 277, $TOP);
         $p->setfont('Times-Bold-iso', 30);
-        $p->text(27, ($TOP+20)-14, $title_latin1);
+        from_to($TITLE, "utf-8", "iso-8859-1");
+        $p->text(27, ($TOP+20)-14, $TITLE);
 
     }
 
@@ -462,4 +461,4 @@ sub get_feiertag
     }
 }
 
-# vim: set sw=4 ts=4 noet:
+# vim: set sw=4 ts=4 et:
